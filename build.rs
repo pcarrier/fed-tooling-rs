@@ -205,16 +205,6 @@ const VERSIONS: &[Version] = &[
     },
 ];
 
-const VERSIONS_RUNTIME_PREFIX: &str = "struct Version<'a> {
-    name: &'a str,
-    compose: &'a str,
-}
-
-const VERSIONS: &[Version] = &[
-";
-
-const VERSIONS_RUNTIME_SUFFIX: &str = "];";
-
 fn ensure(es: &mut Command) -> Result<(), Box<dyn Error>> {
     let status = es.status()?;
     if !status.success() {
@@ -245,10 +235,20 @@ fn main() -> Result<(), Box<dyn Error>> {
 fn runtime_versions() -> String {
     let list = VERSIONS.iter()
         .map(|t| format!(
-            "Version {{ name: {:?}, compose: include_str!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/js/{}/compose/index.js\")) }},",
+            "Version {{ name: {:?}, compose: include_str!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/js/{}/compose/index.js\")) }},\n",
             t.name, t.name))
         .collect::<Vec<_>>().concat();
-    [VERSIONS_RUNTIME_PREFIX, &list, VERSIONS_RUNTIME_SUFFIX].concat()
+    [
+        "struct Version<'a> {
+            name: &'a str,
+            compose: &'a str,
+        }
+
+        const VERSIONS: &[Version] = &[
+    ",
+        &list,
+        "];"
+    ].concat()
 }
 
 fn bundle_script(parent: &PathBuf, name: &str, script: &Script) -> Result<(), Box<dyn Error>> {

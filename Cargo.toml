@@ -1,0 +1,29 @@
+[package]
+name = "fed-tooling"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+glob = "0.3.1"
+serde_json = "1.0.96"
+
+[dependencies]
+deno_url = "0.102.0"
+deno_webidl = "0.102.0"
+serde_json = "1.0.96"
+
+[dependencies.serde]
+version = "1.0.160"
+features = ["derive"]
+
+[dependencies.tokio]
+version = "1.28.0"
+features = ["macros", "rt-multi-thread"]
+
+[dependencies.deno_core]
+version = "0.184.0"
+features = ["include_js_files_for_snapshotting"]
+
+[build-dependencies.deno_core]
+version = "0.184.0"
+features = ["include_js_files_for_snapshotting"]
