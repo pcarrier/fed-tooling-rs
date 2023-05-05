@@ -1,11 +1,6 @@
 use std::rc::Rc;
 
-use deno_core::{
-    FastString::Static,
-    JsRuntime,
-    resolve_url,
-    RuntimeOptions,
-};
+use deno_core::{JsRuntime, RuntimeOptions, Snapshot};
 use deno_core::FastString::Owned;
 
 include!(concat!(env!("OUT_DIR"), "/versions.rs"));
@@ -53,16 +48,12 @@ pub async fn compose(version: &str, services: &[Service]) -> std::result::Result
     let mut runtime = JsRuntime::new(RuntimeOptions {
         module_loader: Some(Rc::new(deno_core::FsModuleLoader)),
         extensions: vec![
-            deno_webidl::deno_webidl::init_ops_and_esm(),
-            deno_url::deno_url::init_ops_and_esm(),
+            deno_webidl::deno_webidl::init_ops(),
+            deno_url::deno_url::init_ops(),
         ],
+        startup_snapshot: Some(Snapshot::Static(version.compose)),
         ..Default::default()
     });
-    let specifier = resolve_url(&format!("file:///{}.js", version.name))?;
-    let module = runtime.load_main_module(&specifier, Some(Static(version.compose))).await?;
-    let mod_load = runtime.mod_evaluate(module);
-    runtime.run_event_loop(false).await?;
-    mod_load.await??;
     let res = runtime
         .execute_script("<main>", Owned(invokation.clone()))?;
     let str = res.open(runtime.v8_isolate())

@@ -6,7 +6,13 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
 };
+use std::fs::read_to_string;
+use std::rc::Rc;
 
+use deno_core::{JsRuntime, resolve_url, RuntimeOptions};
+use deno_core::FastString::Owned;
+use deno_core::futures::executor::block_on;
+use deno_core::v8::StartupData;
 use serde_json::json;
 
 struct Script<'a> {
@@ -120,7 +126,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     for version in VERSIONS {
         let dir = js_dir.join(version.name);
-        bundle_script(&dir, "compose", &version.compose)?;
+        bundle_script(&dir, "compose", &version, &version.compose)?;
     }
 
     let out_dir = Path::new(&env::var_os("OUT_DIR").ok_or("OUT_DIR not set")?).to_owned();
@@ -132,13 +138,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 fn runtime_versions() -> String {
     let list = VERSIONS.iter()
         .map(|t| format!(
-            "Version {{ name: {:?}, compose: include_str!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/js/{}/compose/index.js\")) }},\n",
+            "Version {{ name: {:?}, compose: include_bytes!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/js/{}/compose/snap.bin\")) }},\n",
             t.name, t.name))
         .collect::<Vec<_>>().concat();
     [
         "struct Version<'a> {
             name: &'a str,
-            compose: &'a str,
+            compose: &'a [u8],
         }
 
         const VERSIONS: &[Version] = &[
@@ -148,7 +154,7 @@ fn runtime_versions() -> String {
     ].concat()
 }
 
-fn bundle_script(parent: &PathBuf, name: &str, script: &Script) -> Result<(), Box<dyn Error>> {
+fn bundle_script(parent: &PathBuf, name: &str, version: &Version, script: &Script) -> Result<(), Box<dyn Error>> {
     let dir = parent.join(name);
     let src_dir = dir.join("src");
     create_dir_all(src_dir.clone())?;
@@ -160,8 +166,8 @@ fn bundle_script(parent: &PathBuf, name: &str, script: &Script) -> Result<(), Bo
     write(dir.join("package.json"), json!({"dependencies": dependencies}).to_string())?;
     write(dir.join("tsconfig.json"), json!({"dependencies": dependencies}).to_string())?;
 
-    let index = src_dir.join("index.ts");
-    write(index, script.index)?;
+    let index_ts = src_dir.join("index.ts");
+    write(index_ts, script.index)?;
 
     ensure(Command::new("npx")
         .arg("pnpm")
@@ -172,8 +178,36 @@ fn bundle_script(parent: &PathBuf, name: &str, script: &Script) -> Result<(), Bo
         .arg("run")
         .arg("build")
         .arg("--")
-        .arg(dir)
+        .arg(dir.clone())
         .current_dir(parent))?;
 
+    let index_js = dir.join("index.js");
+    write(dir.join("snap.bin"), snapshot(index_js, version)?)?;
+
     Ok(())
+}
+
+fn snapshot(path: PathBuf, version: &Version) -> Result<StartupData, Box<dyn Error>> {
+    let str = read_to_string(path)?;
+
+    let mut runtime = JsRuntime::new(RuntimeOptions {
+        module_loader: Some(Rc::new(deno_core::FsModuleLoader)),
+        extensions: vec![
+            deno_webidl::deno_webidl::init_ops(),
+            deno_url::deno_url::init_ops(),
+        ],
+        will_snapshot: true,
+        ..Default::default()
+    });
+
+    let specifier = resolve_url(&format!("file:///{}.js", version.name))?;
+    let module = block_on(runtime
+        .load_main_module(&specifier, Some(Owned(str.into_boxed_str()))))?;
+    let mod_load = runtime.mod_evaluate(module);
+    block_on(runtime.run_event_loop(false))?;
+    block_on(mod_load)??;
+
+    let snap = runtime.snapshot();
+
+    Ok(snap)
 }
