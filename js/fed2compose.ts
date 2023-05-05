@@ -26,8 +26,10 @@ function rewriteError(error) {
 }
 
 function rewriteHint(hint) {
-    const nodes = hint.nodes ? hint.nodes.map(rewriteNode) : undefined;
-    return {...hint, nodes};
+    let { definition, message, nodes } = hint;
+    nodes = nodes ? nodes.map(rewriteNode) : undefined;
+    const code = definition.code;
+    return {code, message, nodes};
 }
 
 globalThis.compose = function compose(

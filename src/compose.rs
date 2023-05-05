@@ -22,14 +22,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Raw response: {}", str);
     if let Some(errs) = result.errors {
         for err in errs {
-            println!("Error: {:?}", err);
+            println!("{:?}", err);
         }
         return Err("errors".into());
     }
 
     if let Some(hints) = result.hints {
         for hint in hints {
-            println!("Lint: {:?}", hint);
+            println!("{:?}", hint);
         }
     }
 

@@ -29,7 +29,8 @@ pub struct Node {
 
 #[derive(serde::Deserialize, PartialEq, Eq, Debug)]
 pub struct Hint {
-    // FIXME: there's more to a hint.
+    pub code: String,
+    pub message: String,
     pub nodes: Option<Vec<Node>>,
 }
 
