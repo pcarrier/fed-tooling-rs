@@ -106,6 +106,19 @@ const VERSIONS: &[Version] = &[
             index: FED2COMPOSE,
         },
     },
+    Version {
+        name: "2.4",
+        compose: Script {
+            packages: &[
+                ("@apollo/composition", "2.4.3"),
+                ("@apollo/federation-internals", "2.4.3"),
+                ("@apollo/query-graphs", "2.4.3"),
+                ("@apollo/query-planner", "2.4.3"),
+                ("graphql", "16.5.0"),
+            ],
+            index: FED2COMPOSE,
+        },
+    },
 ];
 
 fn ensure(es: &mut Command) -> Result<(), Box<dyn Error>> {
