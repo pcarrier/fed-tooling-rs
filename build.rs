@@ -155,7 +155,7 @@ fn runtime_versions() -> String {
             t.name, t.name))
         .collect::<Vec<_>>().concat();
     [
-        "struct Version<'a> {
+        "pub struct Version<'a> {
             name: &'a str,
             compose: &'a [u8],
         }

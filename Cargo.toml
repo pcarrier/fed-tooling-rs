@@ -29,3 +29,11 @@ features = ["macros", "rt-multi-thread"]
 [dependencies.deno_core]
 version = "0.184.0"
 features = ["include_js_files_for_snapshotting"]
+
+[lib]
+name = "fedtooling"
+path = "src/lib.rs"
+
+[[bin]]
+name = "compose"
+path = "src/compose.rs"
